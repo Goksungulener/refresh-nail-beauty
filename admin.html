@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yönetim Paneli</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="login-box" id="login-box">
+      <div class="top">
+        <div class="eyebrow">Stüdyo</div>
+        <h1>Yönetim Girişi</h1>
+      </div>
+      <div class="card">
+        <form id="login-form">
+          <label for="login-email">E-posta</label>
+          <input type="email" id="login-email" required autocomplete="username" />
+          <label for="login-password">Şifre</label>
+          <input type="password" id="login-password" required autocomplete="current-password" />
+          <button type="submit" class="primary">Giriş Yap</button>
+          <p class="msg" id="login-msg"></p>
+        </form>
+      </div>
+    </div>
+
+    <div id="panel" hidden>
+      <div class="top-bar">
+        <h1 id="studio-name">Yönetim</h1>
+        <button class="logout" id="logout-btn">Çıkış Yap</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-appts">Randevular</button>
+        <button class="tab-btn" data-tab="tab-services">Hizmetler</button>
+        <button class="tab-btn" data-tab="tab-hours">Çalışma Saatleri</button>
+        <button class="tab-btn" data-tab="tab-blocks">Özel Kapatmalar</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-appts">
+        <div class="card">
+          <h2>Takvim</h2>
+          <div class="cal-header">
+            <button type="button" id="admin-cal-prev">‹</button>
+            <span class="month-label" id="admin-cal-month-label"></span>
+            <button type="button" id="admin-cal-next">›</button>
+          </div>
+          <div class="cal-grid" id="admin-cal-grid"></div>
+          <p class="empty-note">Noktalı günlerde randevu var. Bir güne tıklayarak sadece o günü görebilirsiniz.</p>
+        </div>
+        <div class="card">
+          <h2>Elle Randevu Ekle</h2>
+          <p class="empty-note">Telefon veya yüz yüze aldığınız randevuları buradan girin, o saat otomatik olarak online randevulara kapanır.</p>
+          <form id="manual-appt-form">
+            <label for="manual-name">Müşteri Adı</label>
+            <input type="text" id="manual-name" required />
+            <label for="manual-phone">Telefon</label>
+            <input type="tel" id="manual-phone" required />
+            <label for="manual-service">Hizmet</label>
+            <select id="manual-service" required></select>
+            <label for="manual-date">Tarih</label>
+            <input type="date" id="manual-date" required />
+            <label for="manual-time">Saat</label>
+            <input type="time" id="manual-time" required />
+            <label for="manual-note">Not (opsiyonel)</label>
+            <input type="text" id="manual-note" />
+            <button type="submit" class="primary">Randevu Ekle</button>
+            <p class="msg" id="manual-appt-msg"></p>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="svc-top">
+            <h2 id="appt-list-title">Yaklaşan Randevular</h2>
+            <button type="button" class="ghost" id="appt-show-all" hidden>Tümünü göster</button>
+          </div>
+          <div id="appt-list"></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-services">
+        <div class="card">
+          <h2>Yeni Hizmet Ekle</h2>
+          <form id="service-form">
+            <label for="svc-new-name">Hizmet Adı</label>
+            <input type="text" id="svc-new-name" required placeholder="Örn: Manikür" />
+            <label for="svc-new-duration">Süre (dakika)</label>
+            <input type="number" id="svc-new-duration" required min="15" step="15" value="60" />
+            <label for="svc-new-price">Fiyat (₺)</label>
+            <input type="number" id="svc-new-price" required min="0" step="10" value="0" />
+            <button type="submit" class="primary">Ekle</button>
+            <p class="msg" id="service-add-msg"></p>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Mevcut Hizmetler</h2>
+          <p class="empty-note">Fiyat veya süreyi değiştirip "Kaydet" deyin. Müşterilerin görmemesini istediğiniz hizmetin "Aktif" kutusunu kaldırın.</p>
+          <div id="service-list"></div>
+          <p class="msg" id="service-msg"></p>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-hours">
+        <div class="card">
+          <h2>Haftalık Çalışma Saatleri</h2>
+          <div id="hours-list"></div>
+          <button type="button" class="primary" id="save-hours">Kaydet</button>
+          <p class="msg" id="hours-msg"></p>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-blocks">
+        <div class="card">
+          <h2>Yeni Kapatma Ekle</h2>
+          <form id="block-form">
+            <label for="block-date">Tarih</label>
+            <input type="date" id="block-date" required />
+            <label for="block-start">Başlangıç saati (opsiyonel)</label>
+            <input type="time" id="block-start" />
+            <label for="block-end">Bitiş saati (opsiyonel)</label>
+            <input type="time" id="block-end" />
+            <label for="block-reason">Not (opsiyonel)</label>
+            <input type="text" id="block-reason" placeholder="Örn: tatil, mola" />
+            <button type="submit" class="primary">Ekle</button>
+            <p class="msg" id="block-msg"></p>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Mevcut Kapatmalar</h2>
+          <div id="block-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

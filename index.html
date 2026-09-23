@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Randevu Al</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="eyebrow">Online Randevu</div>
+      <h1 id="studio-name">Nail Art Stüdyo</h1>
+      <p id="studio-address"></p>
+    </div>
+
+    <div class="card" id="service-section">
+      <h2>Hizmet Seçin</h2>
+      <div class="service-list" id="service-list"></div>
+    </div>
+
+    <div class="card" id="calendar-card" hidden>
+      <h2>Tarih Seçin</h2>
+      <div class="cal-header">
+        <button type="button" id="prev-month" aria-label="Önceki ay">‹</button>
+        <span class="month-label" id="month-label"></span>
+        <button type="button" id="next-month" aria-label="Sonraki ay">›</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <div class="card" id="slot-section" hidden>
+      <h2>Saat Seçin</h2>
+      <p class="empty-note" id="slot-date-label"></p>
+      <div class="slot-grid" id="slot-grid"></div>
+    </div>
+
+    <div class="card" id="booking-section" hidden>
+      <h2>Bilgilerinizi Girin</h2>
+      <form id="booking-form">
+        <label for="cust-name">Ad Soyad</label>
+        <input type="text" id="cust-name" required autocomplete="name" />
+
+        <label for="cust-phone">Telefon</label>
+        <input type="tel" id="cust-phone" required autocomplete="tel" placeholder="05xx xxx xx xx" />
+
+        <label for="cust-note">Not (opsiyonel)</label>
+        <textarea id="cust-note" placeholder="Örn: hangi tasarımı istediğiniz"></textarea>
+
+        <button type="submit" class="primary">Randevuyu Onayla</button>
+        <p class="msg" id="booking-msg"></p>
+      </form>
+    </div>
+
+    <div class="card" id="confirm-section" hidden></div>
+  </div>
+
+  <script type="module" src="js/customer.js"></script>
+</body>
+</html>
