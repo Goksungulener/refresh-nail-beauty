@@ -7,7 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=3" />
+  <link rel="stylesheet" href="css/ai-image.css?v=3" />
+  <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -36,9 +38,11 @@
 
       <div class="tabs">
         <button class="tab-btn active" data-tab="tab-appts">Randevular</button>
+        <button class="tab-btn" data-tab="tab-customers">Müşteriler</button>
         <button class="tab-btn" data-tab="tab-services">Hizmetler</button>
         <button class="tab-btn" data-tab="tab-hours">Çalışma Saatleri</button>
         <button class="tab-btn" data-tab="tab-blocks">Özel Kapatmalar</button>
+        <button class="tab-btn" data-tab="tab-ai-image">AI Görsel</button>
       </div>
 
       <div class="tab-panel active" id="tab-appts">
@@ -56,8 +60,13 @@
           <h2>Elle Randevu Ekle</h2>
           <p class="empty-note">Telefon veya yüz yüze aldığınız randevuları buradan girin, o saat otomatik olarak online randevulara kapanır.</p>
           <form id="manual-appt-form">
+            <div class="contact-pick-row">
+              <button type="button" class="ghost" id="manual-pick-contact" hidden>📇 Rehberden Seç</button>
+              <button type="button" class="ghost" id="manual-paste-phone" hidden>📋 Kopyalanan Numarayı Yapıştır</button>
+            </div>
             <label for="manual-name">Müşteri Adı</label>
-            <input type="text" id="manual-name" required />
+            <input type="text" id="manual-name" list="customer-options" autocomplete="off" required placeholder="Yazmaya başlayın, eski müşteriler önerilir" />
+            <datalist id="customer-options"></datalist>
             <label for="manual-phone">Telefon</label>
             <input type="tel" id="manual-phone" required />
             <label for="manual-service">Hizmet</label>
@@ -79,6 +88,15 @@
             <button type="button" class="ghost" id="appt-show-all" hidden>Tümünü göster</button>
           </div>
           <div id="appt-list"></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-customers">
+        <div class="card">
+          <h2>Müşteriler</h2>
+          <input type="text" id="customer-search" placeholder="İsim veya telefon ile ara" autocomplete="off" />
+          <p class="empty-note" id="customer-count"></p>
+          <div id="customer-list"></div>
         </div>
       </div>
 
@@ -134,9 +152,93 @@
           <div id="block-list"></div>
         </div>
       </div>
+
+      <div class="tab-panel" id="tab-ai-image">
+        <div class="card ai-editor">
+          <h2>AI Görsel Düzenleme</h2>
+          <p class="empty-note">
+            Bir tırnak/ürün fotoğrafı yükleyin, değiştirmek istediğiniz alanı fırça ile
+            boyayın (fare tekerleği ile fırça boyutunu ayarlayabilirsiniz), isterseniz
+            ne olmasını istediğinizi yazıp "Oluştur" deyin.
+          </p>
+
+          <div class="controls-wrapper">
+            <div class="left-panel">
+              <div class="image-controls">
+                <button type="button" id="ai-uploadButton" class="ghost">Görsel Yükle</button>
+                <input type="file" id="ai-fileInput" accept="image/*" style="display:none" />
+                <button type="button" id="ai-clearButton">Temizle</button>
+              </div>
+              <div class="brush-controls">
+                <label for="ai-brushSize" title="Fare tekerleği ile de ayarlanır">Fırça Boyutu:</label>
+                <div class="slider-container">
+                  <input type="range" id="ai-brushSize" min="5" max="40" value="20" />
+                  <span class="slider-value" id="ai-brushSizeValue">20px</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="right-panel">
+              <div class="prompt-row">
+                <input type="text" id="ai-promptInput" placeholder="Ne olmasını istediğinizi yazın (opsiyonel)" />
+              </div>
+              <div class="main-controls">
+                <label class="checkbox-container">
+                  <input type="checkbox" id="ai-improvePrompt" checked />
+                  <span>Prompt'u iyileştir</span>
+                </label>
+                <div>
+                  <button type="button" id="ai-sendButton">Oluştur</button>
+                  <span class="loading" id="ai-loadingIndicator">İşleniyor...</span>
+                </div>
+              </div>
+              <div class="parameters">
+                <div class="slider-container">
+                  <label for="ai-stepsSlider">Adım:</label>
+                  <input type="range" id="ai-stepsSlider" min="15" max="50" value="40" />
+                  <span class="slider-value" id="ai-stepsValue">40</span>
+                </div>
+                <div class="slider-container">
+                  <label for="ai-guidanceSlider">Guidance:</label>
+                  <input type="range" id="ai-guidanceSlider" min="1.5" max="100" value="60" step="0.1" />
+                  <span class="slider-value" id="ai-guidanceValue">60.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info" id="ai-imageInfo"></div>
+          <div id="ai-container"></div>
+          <div id="ai-cursor"></div>
+
+          <div id="ai-resultModal" class="modal">
+            <div class="modal-content">
+              <div class="modal-image-container">
+                <div class="comparison-container">
+                  <div class="image-container">
+                    <img class="image-before" id="ai-originalImage" src="" alt="Orijinal" />
+                    <img class="image-after" id="ai-resultImage" src="" alt="Oluşturulan" />
+                  </div>
+                  <input type="range" min="0" max="100" value="15" class="slider" />
+                  <div class="slider-line"></div>
+                  <div class="slider-button" aria-hidden="true">&lt; &gt;</div>
+                  <div class="label-before">Orijinal</div>
+                  <div class="label-after">Oluşturulan</div>
+                </div>
+              </div>
+              <div class="modal-buttons">
+                <button type="button" id="ai-reuseButton">Bunu Kullan</button>
+                <button type="button" id="ai-saveButton">Kaydet</button>
+                <button type="button" id="ai-closeButton">Kapat</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <script type="module" src="js/admin.js"></script>
+  <script type="module" src="js/admin.js?v=3"></script>
+  <script type="module" src="js/ai-image.js?v=3"></script>
 </body>
 </html>

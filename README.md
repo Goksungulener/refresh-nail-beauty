@@ -86,6 +86,24 @@ sadece kendiniz kullanın, paylaşmayın.
   seçerse), veritabanı seviyesinde çakışma engellenir — ikinci müşteriye
   "bu saat az önce doldu" mesajı gösterilir ve saat listesi güncellenir.
 
+## AI Görsel Düzenleme (opsiyonel)
+
+`admin.html`'deki **AI Görsel** sekmesinden, bir fotoğraf yükleyip fırça ile
+bir alanı boyayarak o alanı AI ile yeniden oluşturabilirsiniz (ör. arka planı
+değiştirme, sosyal medya için mockup hazırlama). FLUX.1 Fill [pro] modelini
+kullanır (bfl.ai). Kurulum:
+
+1. [bfl.ai](https://bfl.ai) hesabınızdan bir API anahtarı alın.
+2. Supabase Dashboard → **Edge Functions** → *Deploy a new function*, isim
+   `flux-fill`, `edge-functions/flux-fill.ts` dosyasının içeriğini yapıştırın.
+3. Supabase Dashboard → **Project Settings → Edge Functions → Secrets**
+   kısmından `FLUX_API_KEY` adında bir secret ekleyip API anahtarınızı girin.
+4. Siteyi (Netlify + Cloudflare) yeniden yayınlayın.
+
+Bu özellik sadece `admin.html`'e giriş yapmış oturum ile çalışır; anonim
+ziyaretçiler çağıramaz (aksi halde ücretli API çağrılarını herkes
+tetikleyebilirdi).
+
 ## Notlar
 
 - Müşteri bilgileri (ad, telefon, not) sadece giriş yapmış stüdyo sahibi

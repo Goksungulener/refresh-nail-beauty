@@ -47,6 +47,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
     loadWorkingHours();
     loadAppointments();
     loadBlockedSlots();
+    loadCustomers();
   } else {
     loginBox.hidden = false;
     panel.hidden = true;
@@ -199,7 +200,7 @@ async function loadWorkingHours() {
       <input type="time" class="start-time" value="${(row.start_time || "10:00").slice(0, 5)}" />
       <input type="time" class="end-time" value="${(row.end_time || "19:00").slice(0, 5)}" />
       <select class="slot-len">
-        ${[15, 30, 45, 60, 90, 120].map((m) => `<option value="${m}" ${row.slot_minutes === m ? "selected" : ""}>${m} dk</option>`).join("")}
+        ${[15, 30, 45, 60, 90, 120].map((m) => `<option value="${m}" ${row.slot_minutes === m ? "selected" : ""}>${m} dk arayla randevu</option>`).join("")}
       </select>
     `;
     hoursList.appendChild(el);
@@ -468,6 +469,59 @@ const manualApptForm = document.getElementById("manual-appt-form");
 const manualApptMsg = document.getElementById("manual-appt-msg");
 const manualServiceSelect = document.getElementById("manual-service");
 
+const manualNameInput = document.getElementById("manual-name");
+const manualPhoneInput = document.getElementById("manual-phone");
+const pickContactBtn = document.getElementById("manual-pick-contact");
+const pastePhoneBtn = document.getElementById("manual-paste-phone");
+
+// Rehberden seçme yalnızca Android Chrome'da destekleniyor; iPhone'da yerine
+// "kopyalanan numarayı yapıştır" düğmesi gösterilir.
+if ("contacts" in navigator && "select" in navigator.contacts) {
+  pickContactBtn.hidden = false;
+} else if (navigator.clipboard?.readText) {
+  pastePhoneBtn.hidden = false;
+}
+
+pickContactBtn.addEventListener("click", async () => {
+  manualApptMsg.textContent = "";
+  try {
+    const [contact] = await navigator.contacts.select(["name", "tel"], { multiple: false });
+    if (!contact) return;
+    if (contact.name?.[0]) manualNameInput.value = contact.name[0];
+    if (contact.tel?.[0]) manualPhoneInput.value = formatTrPhone(contact.tel[0]);
+  } catch (err) {
+    console.error(err);
+    manualApptMsg.textContent = "Rehber açılamadı.";
+    manualApptMsg.className = "msg error";
+  }
+});
+
+pastePhoneBtn.addEventListener("click", async () => {
+  manualApptMsg.textContent = "";
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!/\d{7,}/.test(text.replace(/\D/g, ""))) {
+      manualApptMsg.textContent = "Kopyalanan metinde telefon numarası bulunamadı.";
+      manualApptMsg.className = "msg error";
+      return;
+    }
+    manualPhoneInput.value = formatTrPhone(text);
+  } catch (err) {
+    console.error(err);
+    manualApptMsg.textContent = "Yapıştırma izni verilmedi.";
+    manualApptMsg.className = "msg error";
+  }
+});
+
+/** Rehberden gelen "+90 542..." gibi numaraları "0542 422 77 09" biçimine çevirir. */
+function formatTrPhone(raw) {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("90")) digits = digits.slice(2);
+  if (digits.length === 10 && digits.startsWith("5")) digits = "0" + digits;
+  if (digits.length !== 11) return raw.trim();
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9)}`;
+}
+
 function renderManualServiceOptions() {
   const active = allServices.filter((s) => s.is_active);
   manualServiceSelect.innerHTML = active
@@ -514,6 +568,138 @@ manualApptForm.addEventListener("submit", async (e) => {
     manualApptMsg.textContent = "Randevu eklendi.";
     manualApptMsg.className = "msg success";
     loadAppointments();
+    loadCustomers();
+  }
+});
+
+// ---------- Müşteriler ----------
+const customerList = document.getElementById("customer-list");
+const customerSearch = document.getElementById("customer-search");
+const customerCount = document.getElementById("customer-count");
+const customerOptions = document.getElementById("customer-options");
+
+let allCustomers = []; // [{name, phone, visits, lastVisit, nextAppt}]
+
+function customerLabel(c) {
+  return `${c.name} · ${c.phone}`;
+}
+
+async function loadCustomers() {
+  // Supabase tek seferde en fazla 1000 satır döndürdüğü için sayfa sayfa okunur.
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("customer_name,customer_phone,appt_date,status")
+      .order("appt_date", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) {
+      customerList.innerHTML = `<p class="empty-note">Müşteriler yüklenemedi.</p>`;
+      return;
+    }
+    rows.push(...data);
+    if (data.length < pageSize) break;
+  }
+
+  // Aynı kişi "0542..." ve "+90 542..." gibi farklı yazılmış olabilir; son 10 haneye göre birleştirilir.
+  // Satırlar yeniden eskiye sıralı: ilk görülen isim en güncel olanıdır.
+  const today = todayIsoLocal();
+  const byPhone = new Map();
+  for (const r of rows) {
+    const key = r.customer_phone.replace(/\D/g, "").slice(-10);
+    let c = byPhone.get(key);
+    if (!c) {
+      c = { name: r.customer_name, phone: formatTrPhone(r.customer_phone), visits: 0, lastVisit: null, nextAppt: null };
+      byPhone.set(key, c);
+    }
+    if (r.status === "cancelled") continue;
+    if (r.appt_date < today) {
+      c.visits++;
+      if (!c.lastVisit) c.lastVisit = r.appt_date;
+    } else {
+      c.nextAppt = r.appt_date; // yeniden eskiye gidildiği için sonunda en yakın randevu kalır
+    }
+  }
+
+  allCustomers = [...byPhone.values()].sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  customerOptions.innerHTML = allCustomers
+    .map((c) => `<option value="${escapeAttr(customerLabel(c))}"></option>`)
+    .join("");
+  renderCustomerList();
+}
+
+function renderCustomerList() {
+  const q = customerSearch.value.trim().toLocaleLowerCase("tr");
+  const qDigits = q.replace(/\D/g, "");
+  const list = q
+    ? allCustomers.filter(
+        (c) =>
+          c.name.toLocaleLowerCase("tr").includes(q) ||
+          (qDigits && c.phone.replace(/\D/g, "").includes(qDigits))
+      )
+    : allCustomers;
+
+  customerCount.textContent = q
+    ? `${list.length} sonuç (toplam ${allCustomers.length} müşteri)`
+    : `Toplam ${allCustomers.length} müşteri`;
+
+  if (list.length === 0) {
+    customerList.innerHTML = `<p class="empty-note">${q ? "Eşleşen müşteri yok." : "Henüz müşteri yok."}</p>`;
+    return;
+  }
+
+  const fmt = (iso) =>
+    new Date(iso + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+
+  customerList.innerHTML = list
+    .map((c) => {
+      const details = [`${c.visits} ziyaret`];
+      if (c.lastVisit) details.push(`son: ${fmt(c.lastVisit)}`);
+      if (c.nextAppt) details.push(`sıradaki: ${fmt(c.nextAppt)}`);
+      const attrs = `data-name="${escapeAttr(c.name)}" data-phone="${escapeAttr(c.phone)}"`;
+      return `
+        <div class="appt-item">
+          <div>
+            <div class="who">${escapeHtml(c.name)} · ${escapeHtml(c.phone)}</div>
+            <div class="when">${details.join(" · ")}</div>
+          </div>
+          <div class="appt-actions">
+            <button class="small-ok" data-action="book" ${attrs}>Randevu Ver</button>
+            <button class="small-whatsapp" data-action="wa" ${attrs}>WhatsApp</button>
+            <button class="small-ok" data-action="call" ${attrs}>Ara</button>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+
+customerSearch.addEventListener("input", renderCustomerList);
+
+customerList.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const { name, phone } = btn.dataset;
+
+  if (btn.dataset.action === "book") {
+    document.querySelector('.tab-btn[data-tab="tab-appts"]').click();
+    manualNameInput.value = name;
+    manualPhoneInput.value = phone;
+    manualApptForm.scrollIntoView({ behavior: "smooth", block: "start" });
+    manualServiceSelect.focus();
+  } else if (btn.dataset.action === "wa") {
+    window.open(`https://wa.me/${toWhatsAppNumber(phone)}`, "_blank");
+  } else if (btn.dataset.action === "call") {
+    window.location.href = `tel:${phone.replace(/\s/g, "")}`;
+  }
+});
+
+// Öneri listesinden "Ad · Telefon" seçilince ikiye ayrılıp iki kutuya yazılır.
+manualNameInput.addEventListener("input", () => {
+  const c = allCustomers.find((c) => customerLabel(c) === manualNameInput.value);
+  if (c) {
+    manualNameInput.value = c.name;
+    manualPhoneInput.value = c.phone;
   }
 });
 

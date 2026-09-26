@@ -360,6 +360,7 @@ function showConfirmation({ name, date, time, duration, note, service }) {
     <div class="summary-row"><span>Saat</span><span>${time}</span></div>
     <div class="summary-row"><span>Stüdyo</span><span>${escapeHtml(STUDIO_NAME)}</span></div>
     <button type="button" class="primary" id="ics-btn">📅 Takvime Ekle</button>
+    <a class="secondary-btn" href="refresh-nail-beauty.vcf">👤 Stüdyoyu Kişilere Ekle</a>
     <p class="empty-note" style="text-align:center;margin-top:10px">
       Sorularınız için: ${escapeHtml(STUDIO_PHONE)}
     </p>

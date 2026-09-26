@@ -1,0 +1,314 @@
+/* AI Görsel editörü (FLUX Fill) - admin.html "AI Görsel" sekmesi */
+
+.ai-editor {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.ai-editor .controls-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ai-editor .left-panel {
+  background: var(--surface-soft);
+  padding: 14px;
+  border-radius: 12px;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.ai-editor .right-panel {
+  background: var(--surface-soft);
+  padding: 14px;
+  border-radius: 12px;
+  flex-grow: 1;
+  min-width: 220px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.ai-editor .image-controls {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-editor .brush-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-editor .prompt-row {
+  grid-column: 1 / -1;
+}
+
+.ai-editor .prompt-row input {
+  margin: 0;
+}
+
+.ai-editor .main-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-editor .main-controls > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-editor .parameters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-editor .slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-editor .slider-container label {
+  margin: 0;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.ai-editor .slider-container input[type="range"] {
+  flex: 1;
+}
+
+.ai-editor .slider-value {
+  min-width: 42px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-editor select {
+  margin: 0;
+}
+
+.ai-editor #ai-sendButton {
+  background-color: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.ai-editor #ai-sendButton:hover { background-color: var(--accent-dark); }
+.ai-editor #ai-sendButton:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ai-editor #ai-clearButton {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ai-editor .loading {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-left: 6px;
+  display: none;
+}
+
+.ai-editor .info {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.ai-editor #ai-container {
+  display: inline-block;
+  max-width: 100%;
+  overflow: auto;
+  background-image: linear-gradient(45deg, #808080 25%, transparent 25%),
+                  linear-gradient(-45deg, #808080 25%, transparent 25%),
+                  linear-gradient(45deg, transparent 75%, #808080 75%),
+                  linear-gradient(-45deg, transparent 75%, #808080 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-color: #fff;
+  border-radius: 10px;
+}
+
+.ai-editor #ai-cursor {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  display: none;
+  z-index: 10;
+}
+
+.ai-editor .checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.ai-editor .checkbox-container input { width: auto; }
+
+/* Sonuç modalı */
+.ai-editor .modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  overflow: auto;
+}
+
+.ai-editor .modal-content {
+  background-color: var(--surface);
+  margin: 2% auto;
+  padding: 20px;
+  border-radius: 14px;
+  width: 92%;
+  max-width: 900px;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-editor .modal-image-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.ai-editor .comparison-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  --position: 15%;
+  background: #000;
+}
+
+.ai-editor .image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ai-editor .image-before,
+.ai-editor .image-after {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.ai-editor .image-after {
+  clip-path: inset(0 0 0 var(--position));
+}
+
+.ai-editor .comparison-container .slider {
+  position: absolute;
+  inset: 0;
+  cursor: col-resize;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.ai-editor .slider-line {
+  position: absolute;
+  inset: 0;
+  width: 2px;
+  height: 100%;
+  background-color: #fff;
+  left: var(--position);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ai-editor .slider-button {
+  position: absolute;
+  top: 50%;
+  left: var(--position);
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border-radius: 50%;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--ink-soft);
+}
+
+.ai-editor .label-before,
+.ai-editor .label-after {
+  position: absolute;
+  top: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #2e2a2b;
+}
+
+.ai-editor .label-before { left: 12px; }
+.ai-editor .label-after { right: 12px; }
+
+.ai-editor .modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ai-editor .modal-buttons button {
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  border: none;
+  font-weight: 600;
+}
+
+.ai-editor #reuseButton { background-color: var(--accent); color: #fff; }
+.ai-editor #saveButton { background-color: var(--success); color: #fff; }
+.ai-editor #closeButton { background-color: transparent; border: 1px solid var(--border); color: var(--ink); }
+.ai-editor .modal-buttons button:hover { opacity: 0.9; }
+
+@media (max-width: 620px) {
+  .ai-editor .right-panel { grid-template-columns: 1fr; }
+  .ai-editor .left-panel { width: 100%; }
+}
