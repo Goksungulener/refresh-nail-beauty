@@ -187,6 +187,8 @@ async function loadWorkingHours() {
   }
   const byDay = {};
   data.forEach((r) => (byDay[r.weekday] = r));
+  workingHoursByDay = byDay;
+  renderDaySlots();
 
   hoursList.innerHTML = "";
   DOW_ORDER.forEach((weekday) => {
@@ -245,7 +247,7 @@ async function loadAppointments() {
   const todayIso = todayIsoLocal();
   const { data, error } = await supabase
     .from("appointments")
-    .select("id,appt_date,appt_time,customer_name,customer_phone,note,status,service_name")
+    .select("id,appt_date,appt_time,duration_minutes,customer_name,customer_phone,note,status,service_name")
     .gte("appt_date", todayIso)
     .neq("status", "cancelled")
     .order("appt_date", { ascending: true })
@@ -259,6 +261,71 @@ async function loadAppointments() {
   allAppointments = data || [];
   renderApptCalendar();
   renderApptList();
+  renderDaySlots();
+}
+
+// ---------- Takvimden gün/saat seçip elle randevu ----------
+let workingHoursByDay = {};
+const daySlotsBox = document.getElementById("admin-day-slots");
+
+const toMin = (t) => { const [h, m] = t.slice(0, 5).split(":").map(Number); return h * 60 + m; };
+const toTime = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/** Formda seçili hizmetlerin toplam süresi (dk). */
+function selectedTotalDuration() {
+  const selects = [manualServiceSelect, ...document.querySelectorAll("#manual-extra-services select")];
+  return selects.reduce((sum, sel) => sum + (allServices.find((s) => s.id === sel.value)?.duration_minutes || 0), 0) || 60;
+}
+
+function renderDaySlots() {
+  if (!daySlotsBox) return;
+  const iso = apptFilterDate;
+  if (!iso) { daySlotsBox.innerHTML = ""; return; }
+
+  const [y, mo, d] = iso.split("-").map(Number);
+  const dateObj = new Date(y, mo - 1, d);
+  const title = `<h3 class="day-slots-title">${d} ${CAL_MONTH_LABELS[mo - 1]} · randevu eklemek için saate dokunun</h3>`;
+  const hours = workingHoursByDay[dateObj.getDay()];
+  const fullDayBlock = allBlocks.some((b) => b.block_date === iso && !b.start_time);
+
+  if (!hours || !hours.is_open || fullDayBlock) {
+    daySlotsBox.innerHTML = title + `<p class="empty-note">Bu gün kapalı. Yine de randevu eklemek isterseniz saati aşağıdaki formdan elle girin.</p>`;
+    return;
+  }
+
+  const duration = selectedTotalDuration();
+  const ranges = [
+    ...allAppointments.filter((a) => a.appt_date === iso)
+      .map((a) => ({ start: toMin(a.appt_time), end: toMin(a.appt_time) + (a.duration_minutes || 0) })),
+    ...allBlocks.filter((b) => b.block_date === iso && b.start_time)
+      .map((b) => ({ start: toMin(b.start_time), end: toMin(b.end_time) })),
+  ];
+
+  const now = new Date();
+  const nowMin = iso === todayIsoLocal() ? now.getHours() * 60 + now.getMinutes() : -1;
+  const startMin = toMin(hours.start_time), endMin = toMin(hours.end_time);
+
+  daySlotsBox.innerHTML = title + `<p class="empty-note">Seçili hizmet(ler)in toplam süresi: ${duration} dk. Dolu saatler üstü çizili.</p>`;
+  const grid = document.createElement("div");
+  grid.className = "slot-grid";
+  for (let m = startMin; m + duration <= endMin; m += hours.slot_minutes) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "slot-btn";
+    btn.textContent = toTime(m);
+    btn.disabled = m <= nowMin || ranges.some((r) => m < r.end && m + duration > r.start);
+    btn.addEventListener("click", () => {
+      document.getElementById("manual-date").value = iso;
+      document.getElementById("manual-time").value = toTime(m);
+      grid.querySelectorAll(".slot-btn").forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      manualApptForm.scrollIntoView({ behavior: "smooth", block: "start" });
+      manualNameInput.focus({ preventScroll: true });
+    });
+    grid.appendChild(btn);
+  }
+  if (!grid.children.length) grid.innerHTML = `<p class="empty-note">Bu gün uygun saat yok.</p>`;
+  daySlotsBox.appendChild(grid);
 }
 
 function renderApptList() {
@@ -395,8 +462,10 @@ function renderApptCalendar() {
 
     el.addEventListener("click", () => {
       apptFilterDate = apptFilterDate === iso ? null : iso;
+      if (apptFilterDate) document.getElementById("manual-date").value = iso;
       renderApptCalendar();
       renderApptList();
+      renderDaySlots();
     });
 
     adminCalGrid.appendChild(el);
@@ -522,19 +591,59 @@ function formatTrPhone(raw) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9)}`;
 }
 
-function renderManualServiceOptions() {
-  const active = allServices.filter((s) => s.is_active);
-  manualServiceSelect.innerHTML = active
+const extraServicesBox = document.getElementById("manual-extra-services");
+
+function serviceOptionsHtml() {
+  return allServices
+    .filter((s) => s.is_active)
     .map((s) => `<option value="${s.id}">${escapeHtml(s.name)} (${s.duration_minutes} dk)</option>`)
     .join("");
+}
+
+function renderManualServiceOptions() {
+  manualServiceSelect.innerHTML = serviceOptionsHtml();
+  extraServicesBox.querySelectorAll("select").forEach((sel) => {
+    const v = sel.value;
+    sel.innerHTML = serviceOptionsHtml();
+    sel.value = v;
+  });
+}
+
+document.getElementById("manual-add-service").addEventListener("click", () => {
+  const row = document.createElement("div");
+  row.className = "extra-service-row";
+  row.innerHTML = `<select required>${serviceOptionsHtml()}</select>
+    <button type="button" class="small-danger">Sil</button>`;
+  row.querySelector("button").addEventListener("click", () => { row.remove(); renderDaySlots(); });
+  extraServicesBox.appendChild(row);
+  renderDaySlots();
+});
+
+// Hizmet değişince takvimdeki boş saatler toplam süreye göre yenilenir.
+manualApptForm.addEventListener("change", (e) => {
+  if (e.target.tagName === "SELECT") renderDaySlots();
+});
+
+// Tarih/saat kutusunun herhangi bir yerine tıklayınca seçici açılsın.
+["manual-date", "manual-time", "block-date", "block-start", "block-end"].forEach((id) => {
+  const el = document.getElementById(id);
+  el?.addEventListener("click", () => { try { el.showPicker(); } catch {} });
+});
+
+/** "14:30" + 90 dk → "16:00" */
+function addMinutes(hhmm, mins) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const t = h * 60 + m + mins;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
 
 manualApptForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   manualApptMsg.textContent = "";
 
-  const service = allServices.find((s) => s.id === manualServiceSelect.value);
-  if (!service) {
+  const selects = [manualServiceSelect, ...extraServicesBox.querySelectorAll("select")];
+  const services = selects.map((sel) => allServices.find((s) => s.id === sel.value));
+  if (services.some((s) => !s)) {
     manualApptMsg.textContent = "Önce bir hizmet seçin.";
     manualApptMsg.className = "msg error";
     return;
@@ -543,18 +652,26 @@ manualApptForm.addEventListener("submit", async (e) => {
   const submitBtn = manualApptForm.querySelector("button[type=submit]");
   submitBtn.disabled = true;
 
-  const { error } = await supabase.from("appointments").insert({
-    appt_date: document.getElementById("manual-date").value,
-    appt_time: document.getElementById("manual-time").value,
-    duration_minutes: service.duration_minutes,
-    service_id: service.id,
-    service_name: service.name,
-    service_price: service.price,
-    customer_name: document.getElementById("manual-name").value.trim(),
-    customer_phone: document.getElementById("manual-phone").value.trim(),
-    note: document.getElementById("manual-note").value.trim() || null,
-    status: "confirmed",
+  // Tüm hizmetler tek seferde eklenir: biri çakışırsa hiçbiri kaydedilmez.
+  let time = document.getElementById("manual-time").value;
+  const rows = services.map((service) => {
+    const row = {
+      appt_date: document.getElementById("manual-date").value,
+      appt_time: time,
+      duration_minutes: service.duration_minutes,
+      service_id: service.id,
+      service_name: service.name,
+      service_price: service.price,
+      customer_name: document.getElementById("manual-name").value.trim(),
+      customer_phone: document.getElementById("manual-phone").value.trim(),
+      note: document.getElementById("manual-note").value.trim() || null,
+      status: "confirmed",
+    };
+    time = addMinutes(time, service.duration_minutes);
+    return row;
   });
+
+  const { error } = await supabase.from("appointments").insert(rows);
 
   submitBtn.disabled = false;
 
@@ -565,7 +682,8 @@ manualApptForm.addEventListener("submit", async (e) => {
     manualApptMsg.className = "msg error";
   } else {
     manualApptForm.reset();
-    manualApptMsg.textContent = "Randevu eklendi.";
+    extraServicesBox.innerHTML = "";
+    manualApptMsg.textContent = rows.length > 1 ? `${rows.length} hizmet arka arkaya eklendi.` : "Randevu eklendi.";
     manualApptMsg.className = "msg success";
     loadAppointments();
     loadCustomers();
@@ -720,6 +838,7 @@ async function loadBlockedSlots() {
 
   allBlocks = error ? [] : data || [];
   renderApptCalendar();
+  renderDaySlots();
   renderApptList();
 
   if (error || !data || data.length === 0) {

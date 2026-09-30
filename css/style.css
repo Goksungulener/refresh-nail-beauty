@@ -298,6 +298,11 @@ a.secondary-btn {
   font-weight: 600;
 }
 
+.day-slots-title { font-size: 16px; margin: 10px 0 0; }
+
+.extra-service-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+#manual-add-service { margin-top: 8px; }
+
 .contact-pick-row { display: flex; gap: 8px; margin-top: 12px; }
 .contact-pick-row button { flex: 1; }
 

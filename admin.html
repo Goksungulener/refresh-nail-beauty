@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=3" />
-  <link rel="stylesheet" href="css/ai-image.css?v=3" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/ai-image.css?v=5" />
   <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 </head>
 <body>
@@ -54,7 +54,8 @@
             <button type="button" id="admin-cal-next">›</button>
           </div>
           <div class="cal-grid" id="admin-cal-grid"></div>
-          <p class="empty-note">Noktalı günlerde randevu var. Bir güne tıklayarak sadece o günü görebilirsiniz.</p>
+          <p class="empty-note">Noktalı günlerde randevu var. Bir güne tıklayınca o günün randevularını ve boş saatlerini görürsünüz; boş saate tıklayarak randevu ekleyebilirsiniz.</p>
+          <div id="admin-day-slots"></div>
         </div>
         <div class="card">
           <h2>Elle Randevu Ekle</h2>
@@ -71,6 +72,9 @@
             <input type="tel" id="manual-phone" required />
             <label for="manual-service">Hizmet</label>
             <select id="manual-service" required></select>
+            <div id="manual-extra-services"></div>
+            <button type="button" class="ghost" id="manual-add-service">➕ Başka Hizmet Ekle</button>
+            <p class="empty-note">Birden fazla hizmet seçerseniz arka arkaya sıralanır (ilki seçtiğiniz saatte başlar).</p>
             <label for="manual-date">Tarih</label>
             <input type="date" id="manual-date" required />
             <label for="manual-time">Saat</label>
@@ -238,7 +242,7 @@
     </div>
   </div>
 
-  <script type="module" src="js/admin.js?v=3"></script>
-  <script type="module" src="js/ai-image.js?v=3"></script>
+  <script type="module" src="js/admin.js?v=5"></script>
+  <script type="module" src="js/ai-image.js?v=5"></script>
 </body>
 </html>
