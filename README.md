@@ -14,6 +14,10 @@ Müşterilerin uygun gün/saatleri görüp doğrudan randevu aldığı, stüdyo 
    tüm içeriğini yapıştırıp **Run** deyin. Bu, gerekli tabloları, hizmet listesini ve
    izinleri kurar. (Bu projeyi daha önce `sql/schema.sql` olmadan, hizmet eklenmeden önce
    kurduysanız, bunun yerine sadece `sql/02_add_services.sql` dosyasını çalıştırmanız yeterli.)
+  Randevu düzenleme geçmişi ve personel ataması için ardından `sql/04_appointment_change_history.sql`
+  dosyasını da SQL Editor'de bir kez çalıştırın.
+  AI Boş Saat Doldur iletişim takibi için `sql/05_ai_gap_fill.sql` dosyasını da
+  SQL Editor'de bir kez çalıştırın.
 3. Sol menüden **Authentication → Users** kısmına girip **Add user** ile kendinize
    (stüdyo sahibi) bir e-posta + şifre hesabı oluşturun. Bu hesap `admin.html`
    sayfasına giriş için kullanılacak. (Herkese açık kayıt yoktur, sadece sizin
@@ -63,6 +67,25 @@ bio'nuza, WhatsApp durumunuza vb. ekleyin. Yönetim linkini (`.../admin.html`)
 sadece kendiniz kullanın, paylaşmayın.
 
 ## Nasıl çalışır
+
+### Randevu düzenleme geçmişi
+
+Admin panelindeki **Düzenle** penceresi randevu alanlarını günceller; çakışmalar
+hem panelde hem veritabanı kısıtında kontrol edilir. Eski/yeni değerlerin geçmişe
+yazılması, personel ataması ve personel bazlı çakışma kontrolü için
+`sql/04_appointment_change_history.sql` dosyasını Supabase SQL Editor'de bir kez
+çalıştırın. Personel kaydı/roster sistemi ve ödeme durumu mevcut uygulamada
+bulunmadığından personel adı randevuya serbest metin olarak atanır; ödeme alanı
+eklenmez.
+
+### AI Boş Saat Doldur
+
+Uygun müşteri puanı dış bir AI servisine gönderilmeden, mevcut randevu geçmişinden
+belirli kurallarla hesaplanır. Randevu verilerinde katılım/no-show alanı bulunmadığı
+için bu özellik bunu tahmin etmez; az geçmiş bulunan müşterilerde düşük güven etiketi
+gösterir. WhatsApp mesajı taslak olarak açılır, otomatik gönderilmez. Tekrar iletişim
+önerisini önlemek için kullanıcı mesajı gönderdiğini işaretlediğinde
+`sql/05_ai_gap_fill.sql` ile kurulan tabloya kayıt eklenir.
 
 - **Müşteri tarafı:** Önce bir hizmet seçer (örn. Manikür, Protez Tırnak),
   sonra takvimden bir gün seçer, o gün için o hizmete uygun saatleri görür

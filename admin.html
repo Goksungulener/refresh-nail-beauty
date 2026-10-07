@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/style.css?v=6" />
   <link rel="stylesheet" href="css/ai-image.css?v=5" />
   <script src="https://unpkg.com/konva@9/konva.min.js"></script>
 </head>
@@ -56,6 +56,13 @@
           <div class="cal-grid" id="admin-cal-grid"></div>
           <p class="empty-note">Noktalı günlerde randevu var. Bir güne tıklayınca o günün randevularını ve boş saatlerini görürsünüz; boş saate tıklayarak randevu ekleyebilirsiniz.</p>
           <div id="admin-day-slots"></div>
+          <div id="gap-fill-launch" class="gap-fill-launch" hidden>
+            <div>
+              <strong id="gap-fill-launch-title">Boş saat seçildi</strong>
+              <p id="gap-fill-launch-details"></p>
+            </div>
+            <button type="button" class="primary" id="gap-fill-open">Bu boşluğu doldur</button>
+          </div>
         </div>
         <div class="card">
           <h2>Elle Randevu Ekle</h2>
@@ -87,9 +94,13 @@
         </div>
 
         <div class="card">
-          <div class="svc-top">
+          <div class="svc-top appt-list-header">
             <h2 id="appt-list-title">Yaklaşan Randevular</h2>
-            <button type="button" class="ghost" id="appt-show-all" hidden>Tümünü göster</button>
+            <div class="appt-list-controls">
+              <button type="button" class="ghost" id="customer-patterns-open">Müşteri sıklığı</button>
+              <button type="button" class="ghost" id="appt-show-archive">Geçmiş / İptal</button>
+              <button type="button" class="ghost" id="appt-show-all" hidden>Tümünü göster</button>
+            </div>
           </div>
           <div id="appt-list"></div>
         </div>
@@ -242,7 +253,124 @@
     </div>
   </div>
 
-  <script type="module" src="js/admin.js?v=5"></script>
+  <dialog id="customer-patterns-dialog" class="appt-edit-dialog gap-fill-dialog" aria-labelledby="customer-patterns-title">
+    <div class="appt-edit-header">
+      <div>
+        <p class="eyebrow">Mevcut randevu kayıtları</p>
+        <h2 id="customer-patterns-title">Müşteri Sıklığı</h2>
+      </div>
+      <button type="button" class="appt-edit-close" id="customer-patterns-close" aria-label="Paneli kapat">×</button>
+    </div>
+    <p class="gap-fill-disclaimer">Bu karşılaştırma, iptal edilmemiş geçmiş randevu kayıtlarından hesaplanır. Tamamlandı/no-show bilgisi tutulmadığı için kayıtlar kesinleşmiş ziyaret olarak yorumlanmaz; az geçmiş düşük güvenle işaretlenir.</p>
+    <p id="customer-patterns-summary" class="gap-fill-summary" role="status" aria-live="polite"></p>
+    <div id="customer-patterns-results" class="gap-fill-results"></div>
+    <p id="customer-patterns-message" class="msg" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <dialog id="gap-fill-dialog" class="appt-edit-dialog gap-fill-dialog" aria-labelledby="gap-fill-title">
+    <div class="appt-edit-header">
+      <div>
+        <p class="eyebrow">Gerçek randevu geçmişine dayalı</p>
+        <h2 id="gap-fill-title">AI Boş Saat Doldur</h2>
+      </div>
+      <button type="button" class="appt-edit-close" id="gap-fill-close" aria-label="Paneli kapat">×</button>
+    </div>
+    <p class="gap-fill-disclaimer">Öneriler geçmiş kayıtlara göre sıralanır; müşterinin şu an müsait olduğu doğrulanmaz. Mesaj gönderimi otomatik yapılmaz. No-show verisi uygulamada tutulmadığı için tahmin edilmez.</p>
+    <form id="gap-fill-form" novalidate>
+      <div class="appt-edit-grid">
+        <label>Boş tarih
+          <input type="date" id="gap-fill-date" required />
+        </label>
+        <label>Boş saat
+          <input type="time" id="gap-fill-time" required />
+        </label>
+        <label>Personel / uzman
+          <input type="text" id="gap-fill-staff" required autocomplete="off" placeholder="Örn. Elif" />
+        </label>
+        <label>Hizmet
+          <select id="gap-fill-service" required></select>
+        </label>
+        <label>Süre (dakika)
+          <input type="number" id="gap-fill-duration" min="1" max="1440" step="1" required />
+        </label>
+        <div class="gap-fill-form-submit">
+          <button type="submit" class="primary" id="gap-fill-search">Uygun müşterileri bul</button>
+        </div>
+      </div>
+      <p class="msg" id="gap-fill-msg" role="status" aria-live="polite"></p>
+    </form>
+    <div id="gap-fill-summary" class="gap-fill-summary" role="status" aria-live="polite"></div>
+    <div id="gap-fill-results" class="gap-fill-results"></div>
+    <section id="gap-message-panel" class="gap-message-panel" hidden aria-labelledby="gap-message-title">
+      <div class="svc-top">
+        <h3 id="gap-message-title">Mesaj taslağı</h3>
+        <span class="empty-note">Gönderim için WhatsApp açılır; mesaj otomatik gönderilmez.</span>
+      </div>
+      <textarea id="gap-message-text" rows="4" readonly aria-label="Düzenlenebilir WhatsApp mesajı"></textarea>
+      <p class="msg" id="gap-message-msg" role="status" aria-live="polite"></p>
+      <div class="gap-message-actions">
+        <button type="button" class="ghost" id="gap-message-edit">Mesajı Düzenle</button>
+        <button type="button" class="primary" id="gap-message-whatsapp">WhatsApp'ta Aç</button>
+        <button type="button" class="ghost" id="gap-message-cancel">İptal</button>
+        <button type="button" class="small-ok" id="gap-message-contacted" hidden>İletişime geçildi</button>
+      </div>
+    </section>
+  </dialog>
+
+  <dialog id="appt-edit-dialog" class="appt-edit-dialog" aria-labelledby="appt-edit-title">
+    <form id="appt-edit-form" novalidate>
+      <div class="appt-edit-header">
+        <div>
+          <p class="eyebrow">Randevu yönetimi</p>
+          <h2 id="appt-edit-title">Randevuyu Düzenle</h2>
+        </div>
+        <button type="button" class="appt-edit-close" id="appt-edit-close" aria-label="Düzenlemeyi kapat">×</button>
+      </div>
+      <div class="appt-edit-grid">
+        <label>Müşteri
+          <input type="text" id="appt-edit-customer" required autocomplete="name" />
+        </label>
+        <label>Müşteri telefonu
+          <input type="tel" id="appt-edit-phone" required autocomplete="tel" />
+        </label>
+        <label>Hizmet
+          <select id="appt-edit-service" required></select>
+        </label>
+        <label>Personel / uzman
+          <input type="text" id="appt-edit-staff" autocomplete="off" placeholder="Atanmadı" />
+        </label>
+        <label>Durum
+          <select id="appt-edit-status" required>
+            <option value="pending">Bekliyor</option>
+            <option value="confirmed">Onaylandı</option>
+            <option value="cancelled">İptal edildi</option>
+          </select>
+        </label>
+        <label>Tarih
+          <input type="date" id="appt-edit-date" required />
+        </label>
+        <label>Başlangıç saati
+          <input type="time" id="appt-edit-time" required />
+        </label>
+        <label>Süre (dakika)
+          <input type="number" id="appt-edit-duration" required min="1" max="1440" step="1" />
+        </label>
+        <label>Fiyat (₺)
+          <input type="number" id="appt-edit-price" required min="0" step="0.01" />
+        </label>
+        <label class="appt-edit-wide">Not
+          <textarea id="appt-edit-note" rows="3"></textarea>
+        </label>
+      </div>
+      <p class="msg" id="appt-edit-msg" role="status" aria-live="polite"></p>
+      <div class="appt-edit-actions">
+        <button type="button" class="ghost" id="appt-edit-cancel">Değişiklikleri iptal et</button>
+        <button type="submit" class="primary" id="appt-edit-save">Değişiklikleri Kaydet</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/admin.js?v=6"></script>
   <script type="module" src="js/ai-image.js?v=5"></script>
 </body>
 </html>

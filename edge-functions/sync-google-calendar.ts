@@ -76,6 +76,9 @@ function parseEvents(ics: string): ParsedEvent[] {
     const statusMatch = body.match(/^STATUS:(.*)$/m);
 
     if (!uidMatch || !dtStartMatch) continue;
+    // Sitenin kendi yazdığı randevular (push-google-calendar, kimlik "rnb...") zaten
+    // randevu olarak kayıtlı; tekrar kapatma olarak eklenmesin.
+    if (uidMatch[1].trim().startsWith("rnb")) continue;
     if (statusMatch && statusMatch[1].trim() === "CANCELLED") continue;
 
     const start = parseIcsDateTime(dtStartMatch[1]);

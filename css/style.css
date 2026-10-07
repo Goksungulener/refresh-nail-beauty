@@ -462,6 +462,117 @@ button.small-ok {
   gap: 8px;
 }
 
+.appt-list-header { flex-wrap: wrap; }
+.appt-list-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.appt-item[data-appointment-id] { cursor: pointer; }
+.appt-item[data-appointment-id]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+button.small-edit {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--surface-soft);
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.small-edit:hover { border-color: var(--accent); }
+
+.appt-edit-dialog {
+  width: min(600px, calc(100% - 24px));
+  max-height: min(90vh, 820px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, .24);
+}
+
+.appt-edit-dialog::backdrop { background: rgba(25, 18, 20, .58); }
+.appt-edit-dialog form { padding: 22px; overflow-y: auto; }
+.appt-edit-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.appt-edit-header .eyebrow { margin: 0 0 5px; color: var(--accent); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.appt-edit-header h2 { margin: 0; }
+.appt-edit-close { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--surface-soft); color: var(--ink); font-size: 23px; cursor: pointer; }
+.appt-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px 16px; }
+.appt-edit-grid label { display: grid; gap: 6px; color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+.appt-edit-grid input, .appt-edit-grid select, .appt-edit-grid textarea { width: 100%; min-width: 0; margin: 0; color: var(--ink); }
+.appt-edit-grid textarea { resize: vertical; }
+.appt-edit-wide { grid-column: 1 / -1; }
+.appt-edit-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.appt-edit-actions button { width: auto; margin: 0; }
+.appt-edit-actions .ghost { color: var(--ink-soft); }
+.appt-edit-dialog .msg { min-height: 0; margin: 10px 0 0; }
+
+.gap-fill-launch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.gap-fill-launch[hidden] { display: none; }
+.gap-fill-launch strong { display: block; font-size: 14px; }
+.gap-fill-launch p { margin: 4px 0 0; color: var(--ink-soft); font-size: 12px; }
+.gap-fill-launch .primary { width: auto; margin: 0; }
+.gap-fill-dialog { width: min(760px, calc(100% - 24px)); }
+.gap-fill-dialog > .appt-edit-header,
+.gap-fill-dialog > .gap-fill-disclaimer,
+.gap-fill-dialog > #gap-fill-form,
+.gap-fill-dialog > .gap-fill-summary,
+.gap-fill-dialog > .gap-fill-results,
+.gap-fill-dialog > .gap-message-panel { margin-left: 22px; margin-right: 22px; }
+.gap-fill-dialog > .appt-edit-header { margin-top: 22px; }
+.gap-fill-disclaimer { padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--surface-soft); color: var(--ink-soft); font-size: 12px; line-height: 1.55; }
+.gap-fill-form-submit { display: flex; align-items: end; }
+.gap-fill-form-submit .primary { margin: 0; }
+.gap-fill-summary { margin-top: 14px; font-weight: 700; font-size: 14px; }
+.gap-fill-results { display: grid; gap: 10px; margin-top: 10px; max-height: 340px; overflow-y: auto; }
+.gap-candidate { padding: 14px 0; border-top: 1px solid var(--border); }
+.gap-candidate-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.gap-candidate-header h3 { margin: 0; font-family: "Inter", sans-serif; font-size: 15px; }
+.gap-candidate-score { display: flex; align-items: center; gap: 6px; color: var(--accent-dark); font-weight: 700; white-space: nowrap; }
+.gap-candidate-score strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.customer-pattern-status { padding: 6px 9px; border-radius: 999px; background: var(--surface-soft); color: var(--accent-dark); font-size: 11px; font-weight: 700; text-align: right; }
+.customer-pattern-followup { margin: 9px 0; color: var(--ink); font-size: 12px; font-weight: 600; }
+.gap-confidence { display: inline-block; margin-top: 5px; padding: 3px 7px; border-radius: 999px; background: var(--pending-soft); color: var(--pending); font-size: 10px; font-weight: 700; }
+.gap-confidence.high { background: var(--success-soft); color: var(--success); }
+.gap-candidate-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0; color: var(--ink-soft); font-size: 11px; }
+.gap-candidate-reasons { margin: 0 0 10px; padding-left: 18px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+.gap-candidate-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gap-candidate-actions button { width: auto; margin: 0; }
+.gap-message-panel { margin-top: 16px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); }
+.gap-message-panel[hidden] { display: none; }
+.gap-message-panel h3 { margin: 0; font-size: 16px; }
+.gap-message-panel textarea { width: 100%; min-height: 96px; margin-top: 10px; color: var(--ink); background: var(--surface); }
+.gap-message-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.gap-message-actions button { width: auto; margin: 0; }
+
+@media (max-width: 520px) {
+  .appt-edit-dialog form { padding: 18px; }
+  .appt-edit-grid { grid-template-columns: 1fr; }
+  .appt-edit-wide { grid-column: auto; }
+  .appt-edit-actions { flex-direction: column-reverse; }
+  .appt-edit-actions button { width: 100%; }
+  .gap-fill-dialog > .appt-edit-header,
+  .gap-fill-dialog > .gap-fill-disclaimer,
+  .gap-fill-dialog > #gap-fill-form,
+  .gap-fill-dialog > .gap-fill-summary,
+  .gap-fill-dialog > .gap-fill-results,
+  .gap-fill-dialog > .gap-message-panel { margin-left: 18px; margin-right: 18px; }
+  .gap-fill-form-submit .primary { width: 100%; }
+  .gap-message-actions button { flex: 1 1 100%; }
+}
+
 button.small-whatsapp {
   padding: 6px 10px;
   border-radius: 8px;
