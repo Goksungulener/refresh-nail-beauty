@@ -284,6 +284,10 @@ function renderApptList() {
 
   apptList.innerHTML = "";
 
+  // Aynı müşterinin (telefon numarasına göre) aynı gündeki randevularını grupla
+  const groups = groupSameDayAppointments(data);
+  const shownGroups = new Set();
+
   dayBlocks.forEach((b) => {
     const timeStr = b.start_time ? `${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}` : "Tüm gün";
     const el = document.createElement("div");
@@ -304,6 +308,11 @@ function renderApptList() {
   data.forEach((appt) => {
     const dateObj = new Date(appt.appt_date + "T00:00:00");
     const dateStr = dateObj.toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
+    const groupKey = sameDayGroupKey(appt);
+    const group = groups.get(groupKey);
+    // Toplu butonlar, grubun sadece ilk randevusunda gösterilir
+    const showGroupButtons = group.length > 1 && !shownGroups.has(groupKey);
+    if (showGroupButtons) shownGroups.add(groupKey);
     const el = document.createElement("div");
     el.className = "appt-item";
     el.innerHTML = `
@@ -335,10 +344,31 @@ function renderApptList() {
           data-time="${appt.appt_time.slice(0, 5)}">
           WhatsApp: Hatırlatma
         </button>
+        ${showGroupButtons ? `
+        <button class="small-whatsapp" data-action="wa-confirm-all" data-group="${escapeAttr(groupKey)}">
+          WhatsApp: Tüm Randevular Onay (${group.length})
+        </button>
+        <button class="small-whatsapp" data-action="wa-remind-all" data-group="${escapeAttr(groupKey)}">
+          WhatsApp: Tüm Randevular Hatırlatma (${group.length})
+        </button>` : ""}
       </div>
     `;
     apptList.appendChild(el);
   });
+}
+
+function sameDayGroupKey(appt) {
+  return `${appt.appt_date}|${toWhatsAppNumber(appt.customer_phone)}`;
+}
+
+function groupSameDayAppointments(appts) {
+  const groups = new Map();
+  appts.forEach((a) => {
+    const key = sameDayGroupKey(a);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(a);
+  });
+  return groups;
 }
 
 function statusLabel(s) {
@@ -428,6 +458,12 @@ apptList.addEventListener("click", async (e) => {
     return;
   }
 
+  if (action === "wa-confirm-all" || action === "wa-remind-all") {
+    const group = allAppointments.filter((a) => sameDayGroupKey(a) === btn.dataset.group);
+    if (group.length > 0) openWhatsAppGroupMessage(action, group);
+    return;
+  }
+
   if (action === "delete-block") {
     btn.disabled = true;
     const { error } = await supabase.from("blocked_slots").delete().eq("id", btn.dataset.id);
@@ -460,6 +496,23 @@ function openWhatsAppMessage(action, data) {
       : `Merhaba ${name}, ${date} tarihinde saat ${time}'teki${serviceText} ${STUDIO_NAME} randevunuzu hatırlatmak isteriz. Görüşmek üzere!`;
 
   const url = `https://wa.me/${toWhatsAppNumber(phone)}?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
+}
+
+/** Aynı müşterinin aynı gündeki tüm randevularını tek WhatsApp mesajında gönderir. */
+function openWhatsAppGroupMessage(action, appts) {
+  const first = appts[0];
+  const dateStr = new Date(first.appt_date + "T00:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long" });
+  const lines = appts
+    .map((a) => `• ${a.appt_time.slice(0, 5)}${a.service_name ? " - " + a.service_name : ""}`)
+    .join("\n");
+
+  const message =
+    action === "wa-confirm-all"
+      ? `Merhaba ${first.customer_name}, ${dateStr} tarihindeki ${STUDIO_NAME} randevularınız oluşturulmuştur:\n${lines}`
+      : `Merhaba ${first.customer_name}, ${dateStr} tarihindeki ${STUDIO_NAME} randevularınızı hatırlatmak isteriz:\n${lines}\nGörüşmek üzere!`;
+
+  const url = `https://wa.me/${toWhatsAppNumber(first.customer_phone)}?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank");
 }
 
