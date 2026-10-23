@@ -394,12 +394,20 @@ function renderDaySlots() {
   daySlotsBox.appendChild(grid);
 }
 
+/** Randevu bitmediyse true: bugünkü randevular da bitiş saatine kadar "yaklaşan" sayılır. */
+function isAppointmentUpcoming(a) {
+  const today = todayIsoLocal();
+  if (a.appt_date !== today) return a.appt_date > today;
+  const now = new Date();
+  return toMin(a.appt_time) + (a.duration_minutes || 0) > now.getHours() * 60 + now.getMinutes();
+}
+
 function renderApptList() {
   const data = apptFilterDate
     ? allAppointments.filter((a) => a.appt_date === apptFilterDate)
     : showAllAppointments
       ? allAppointments
-      : allAppointments.filter((a) => a.appt_date >= todayIsoLocal() && a.status !== "cancelled");
+      : allAppointments.filter((a) => isAppointmentUpcoming(a) && a.status !== "cancelled");
   const dayBlocks = apptFilterDate
     ? allBlocks.filter((b) => b.block_date === apptFilterDate)
     : [];
@@ -469,7 +477,8 @@ function renderApptList() {
         <button class="small-edit" data-action="edit" data-id="${appt.id}">Düzenle</button>
         <span class="badge ${appt.status}">${statusLabel(appt.status)}</span>
         ${appt.status === "pending" ? `<button class="small-ok" data-action="confirm" data-id="${appt.id}">Onayla</button>` : ""}
-        <button class="small-danger" data-action="cancel" data-id="${appt.id}">Randevuyu iptal et</button>
+        ${appt.status !== "cancelled" ? `<button class="small-danger" data-action="cancel" data-id="${appt.id}">Randevuyu iptal et</button>` : ""}
+        <button class="small-danger" data-action="delete-appt" data-id="${appt.id}">Sil</button>
         <button
           class="small-whatsapp"
           data-action="wa-confirm"
@@ -638,6 +647,21 @@ apptList.addEventListener("click", async (e) => {
     btn.disabled = true;
     const { error } = await supabase.from("blocked_slots").delete().eq("id", btn.dataset.id);
     if (!error) loadBlockedSlots();
+    return;
+  }
+
+  if (action === "delete-appt") {
+    const appt = allAppointments.find((a) => a.id === btn.dataset.id);
+    const label = appt ? `${appt.customer_name} · ${appt.appt_date} ${appt.appt_time.slice(0, 5)}` : "Bu randevu";
+    if (!confirm(`${label}\n\nRandevu kalıcı olarak silinecek ve saat boşalacak. Bu işlem geri alınamaz. Emin misiniz?`)) return;
+    btn.disabled = true;
+    const { error } = await supabase.from("appointments").delete().eq("id", btn.dataset.id);
+    if (error) {
+      btn.disabled = false;
+      alert("Randevu silinemedi: " + error.message);
+      return;
+    }
+    await loadAppointments();
     return;
   }
 
